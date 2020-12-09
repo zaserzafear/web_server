@@ -1,0 +1,65 @@
+version: "3"
+networks:
+  default:
+    external:
+      name: web_network
+  webproxy:
+    external:
+      name: webproxy
+
+services:
+  php:
+    container_name: www_php
+    build: ./www/php
+    restart: unless-stopped
+    volumes:
+      - ./www/html:/var/www/html
+    expose:
+      - "9000"
+    depends_on:
+      - db
+
+  nginx:
+    container_name: www_nginx
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    networks:
+      - webproxy
+      - default
+    environment:
+      - VIRTUAL_HOST=www.zaserzafear.dev
+      - LETSENCRYPT_HOST=www.zaserzafear.dev
+      - LETSENCRYPT_EMAIL=naserdoctor@gmail.com
+    volumes:
+      - ./www/html/:/var/www/html
+      - ./www/nginx/conf/nginx.conf:/etc/nginx/conf/nginx.conf:ro
+      - ./www/nginx/conf.d:/etc/nginx/conf.d:ro
+    expose:
+      - "80"
+
+  db:
+    container_name: www_mariadb
+    image: mariadb:latest
+    restart: unless-stopped
+    volumes:
+      - ./mariadb/initdb/:/docker-entrypoint-initdb.d
+      - ./mariadb/data/:/var/lib/mysql/
+    environment:
+      - MYSQL_ROOT_PASSWORD=devops101
+      - MYSQL_DATABASE=devops_db
+      - MYSQL_USER=devops
+      - MYSQL_PASSWORD=devops101
+
+  pma:
+    container_name: www_phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    networks:
+      - webproxy
+      - default
+    environment:
+      - VIRTUAL_HOST=phpmyadmin.zaserzafear.dev
+      - LETSENCRYPT_HOST=phpmyadmin.zaserzafear.dev
+      - LETSENCRYPT_EMAIL=naserdoctor@gmail.com
+    expose:
+      - "80"
